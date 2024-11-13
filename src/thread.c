@@ -7,7 +7,8 @@
 #include <pico/cyw43_arch.h>
 #include "thread_helpers.h"
 
-//SemaphoreHandle_t semaphore;
+SemaphoreHandle_t semaphore;
+TaskHandle_t first;
 
 int counter = 0;
 bool on = false;
@@ -24,29 +25,30 @@ bool on = false;
 // 	}
 // }
 
-// void first_thread(void *params) {
-//     int sema;
-// 	while (1) {
-//         cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, on);
-//         vTaskDelay(100);
-
-//         // Critical section
-//         xSemaphoreTake(semaphore, 100);
-// 		printf("hello world from %s! Count %d\n", "first", counter++);
-//         sema = xSemaphoreGive(semaphore);
-
-//         on = !on;
-// 	}
-// }
 
 void master_thread(void *params) {
-    // semaphore = xSemaphoreCreateCounting(1, 1);
-    // xTaskCreate(first_thread, "FirstThread",
-    //             SIDE_TASK_STACK_SIZE, NULL, SIDE_TASK_PRIORITY, NULL);
+    semaphore = xSemaphoreCreateCounting(1, 1);
+    xTaskCreate(first_thread, "FirstThread",
+                SIDE_TASK_STACK_SIZE, NULL, SIDE_TASK_PRIORITY, &first);
     // xTaskCreate(second_thread, "SecondThread",
     //             SIDE_TASK_STACK_SIZE, NULL, SIDE_TASK_PRIORITY, NULL);
     while (1) {
         vTaskDelay(5000);
-        printf("hello world\n");
+        printf("hello world from kiba\n");
     }
+}
+
+void first_thread(void *params) {
+    int sema;
+	while (1) {
+        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, on);
+        vTaskDelay(100);
+
+        // Critical section
+        xSemaphoreTake(semaphore, 100);
+		printf("hello world from %s! Count %d\n", "first", counter++);
+        sema = xSemaphoreGive(semaphore);
+
+        on = !on;
+	}
 }

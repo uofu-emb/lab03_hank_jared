@@ -40,6 +40,8 @@
     "files.associations": {
         "freertos.h": "c",
         "thread_helpers.h": "c",
-        "cyw43_arch.h": "c"
+        "cyw43_arch.h": "c",
+        "semphr.h": "c",
+        "type_traits": "c"
     }
 }
