@@ -60,18 +60,23 @@ void test_unblocked() {
     TEST_ASSERT_EQUAL(1, on);
 }
 
-void test_variable_assignment()
-{
-    int x = 1;
-    TEST_ASSERT_TRUE_MESSAGE(x == 1,"Variable assignment failed.");
-}
+void test_deadlock() {
+    SemaphoreHandle_t sema_one = xSemaphoreCreateCounting(1, 1);
+    SemaphoreHandle_t sema_one = xSemaphoreCreateCounting(1, 1);
+    TaskHandle_t dummy_one, dummy_two;
+    int counter = 0;
+    int status;
 
-void test_multiplication(void)
-{
-    int x = 30;
-    int y = 6;
-    int z = x / y;
-    TEST_ASSERT_TRUE_MESSAGE(z == 5, "Multiplication of two integers returned incorrect value.");
+    // Create the second task and immediately suspend it
+    xTaskCreate(dummy_thread, "dummy_two",
+                SIDE_TASK_STACK_SIZE, NULL, SIDE_TASK_PRIORITY, &dummy_two);
+    vTaskSuspend(dummy_two);
+
+    // Create the first task and delay for the second task to suspend
+    xTaskCreate(dummy_thread, "dummy_one",
+                SIDE_TASK_STACK_SIZE, NULL, SIDE_TASK_PRIORITY, &dummy_one);
+    vTaskDelay(3000);
+    
 }
 
 

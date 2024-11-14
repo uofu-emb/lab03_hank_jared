@@ -5,6 +5,7 @@
 #include <pico/stdlib.h>
 #include <pico/multicore.h>
 #include <pico/cyw43_arch.h>
+#include "thread_helpers.h"
 
 // Locks print statment in a semaphore and prints out thread details. Returns semaphore give
 // status. 1 = Returned sucessfully, 0 = error.
@@ -38,4 +39,21 @@ int blink_led(bool *on, SemaphoreHandle_t semaphore, TickType_t timeout) {
     
     // Return SemaphoreGive status
     return xSemaphoreGive(semaphore);
+}
+
+int deadlock(DeadlockData *deadlock_data) {
+    // Increment counter and take the semaphore
+    deadlock_data->counter++;
+    printf("%s incremented counter\n", deadlock_data->task_name);
+
+    // First block
+    xSemaphoreTake(deadlock_data->a, portMAX_DELAY);
+    deadlock_data->counter++;
+    printf("%s took semaphore and incremented counter\n", deadlock_data->task_name);
+    vTaskDelay(100);
+    printf("%s delayed, trying to grab next semaphore\n", deadlock_data->task_name);
+
+    // Second block
+    xSeamphoreTake(deadlock_data->b, portMAX_DELAY);
+    
 }
