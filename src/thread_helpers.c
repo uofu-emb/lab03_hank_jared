@@ -66,5 +66,31 @@ int deadlock(DeadlockData *deadlock_data) {
     // End first block
 
     vTaskSuspend(deadlock_data->task);
+}
 
+void orphaned_lock(OrphanedLockData *orphan_data)
+{
+    while (1) {
+        xSemaphoreTake(orphan_data->semaphore, portMAX_DELAY);
+        orphan_data->counter++;
+        if (orphan_data->counter % 2) {
+            continue;
+        }
+        printk("Count %d\n", orphan_data->counter);
+        xSemaphoreGive(orphan_data->semaphore);
+    }
+}
+
+void unorphaned_lock(OrphanedLockData *orphan_data)
+{
+    while (1) {
+        xSemaphoreTake(orphan_data->semaphore, portMAX_DELAY);
+        orphan_data->counter++;
+        if (orphan_data->counter % 2) {
+            xSemaphoreGive(orphan_data->semaphore);
+            continue;
+        }
+        printk("Count %d\n", orphan_data->counter);
+        xSemaphoreGive(orphan_data->semaphore);
+    }
 }

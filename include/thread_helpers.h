@@ -21,6 +21,11 @@ typedef struct DeadlockData {
     int counter;
 } DeadlockData;
 
+typedef struct OrphanedLockData {
+    SemaphoreHandle_t semaphore;
+    int counter;
+} OrphanedLockData;
+
 // Thread handlers
 void master_thread(void *params);
 void first_thread(void *params);
@@ -29,7 +34,7 @@ void second_thread(void *params);
 // Helpers
 int print_counter(TaskHandle_t task, SemaphoreHandle_t semaphore, int *counter, 
     TickType_t timeout);
-
 int blink_led(bool *on, SemaphoreHandle_t semaphore, TickType_t timeout);
-
 int deadlock(DeadlockData *deadlock_data);
+void orphaned_lock(OrphanedLockData *orphan_data);
+void unorphaned_lock(OrphanedLockData *orphan_data);

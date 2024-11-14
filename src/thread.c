@@ -32,7 +32,6 @@ void first_thread(void *params) {
         vTaskDelay(100);
         blink_led(&on, semaphore, portMAX_DELAY);
         print_counter(first, semaphore, &counter, portMAX_DELAY);
-
 	}
 }
 

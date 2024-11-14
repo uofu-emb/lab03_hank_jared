@@ -70,7 +70,7 @@ void test_deadlock() {
     DeadlockData first = {sema_one, sema_two, dummy_one, "dummy_one", 0};
     DeadlockData second = {sema_two, sema_one, dummy_two, "dummy_two", 10};
 
-    printf("Creating tasks\n");
+    printf("Creating deadlock tasks\n");
     // Create the tasks
     xTaskCreate(deadlock, "dummy_one",
                 SIDE_TASK_STACK_SIZE, &first, SIDE_TASK_PRIORITY, &dummy_one);
@@ -80,9 +80,10 @@ void test_deadlock() {
     
     // Delay to get system locked up
     vTaskDelay(5000);
+
+    // Get info about tasks
     vTaskGetInfo(dummy_one, &first_status, pdTRUE, eInvalid);
     vTaskGetInfo(dummy_two, &second_status, pdTRUE, eInvalid);
-
     eTaskState dummy_one_state = first_status.eCurrentState;
     eTaskState dummy_two_state = second_status.eCurrentState;
 
@@ -95,12 +96,79 @@ void test_deadlock() {
     vTaskDelete(dummy_two);
 }
 
+void test_orphaned_lock() {
+    SemaphoreHandle_t semaphore = xSemaphoreCreateCounting(1, 1);
+    TaskHandle_t dummy_one, dummy_two;
+    TaskStatus_t first_status, second_status;
+    OrphanedLockData orphan_data_a = {semaphore, 0};
+    OrphanedLockData orphan_data_b = {semaphore, 10};
+
+    // Create the tasks
+    printf("Creating orphan lock threads\n");
+    xTaskCreate(orphaned_lock, "dummy_one",
+                SIDE_TASK_STACK_SIZE, &orphan_data_a, SIDE_TASK_PRIORITY, &dummy_one);
+    prinf("Giving first task time to begin\n");
+    vTaskDelay(3000);
+
+    xTaskCreate(orphaned_lock, "dummy_two",
+                SIDE_TASK_STACK_SIZE, &orphan_data_b, SIDE_TASK_PRIORITY, &dummy_two);
+    printf("Giving time for second task to begin\n");
+    vTaskDelay(3000);
+    printf("Tasks created");
+
+    // Get task statuses
+    vTaskGetInfo(dummy_one, &first_status, pdTRUE, eInvalid);
+    vTaskGetInfo(dummy_two, &second_status, pdTRUE, eInvalid);
+    eTaskState dummy_one_state = first_status.eCurrentState;
+    eTaskState dummy_two_state = second_status.eCurrentState;
+
+    TEST_ASSERT_EQUAL(1, dummy_one_state);
+    TEST_ASSERT_EQUAL(2, dummy_two_state);
+    TEST_ASSERT_EQUAL(1, orphan_data_a.counter);
+    TEST_ASSERT_EQUAL(10, orphan_data_b.counter);
+
+    vTaskDelete(dummy_one);
+    vTaskDelete(dummy_two);
+}
+
+void test_unorphaned_lock() {
+    SemaphoreHandle_t semaphore = xSemaphoreCreateCounting(1, 1);
+    TaskHandle_t dummy_one, dummy_two;
+    TaskStatus_t first_status, second_status;
+    OrphanedLockData orphan_data_a = {semaphore, 0};
+    OrphanedLockData orphan_data_b = {semaphore, 10};
+
+    // Create the tasks
+    printf("Creating unorphaned lock threads\n");
+    xTaskCreate(unorphaned_lock, "dummy_one",
+                SIDE_TASK_STACK_SIZE, &orphan_data_a, SIDE_TASK_PRIORITY, &dummy_one);
+    xTaskCreate(unorphaned_lock, "dummy_two",
+                SIDE_TASK_STACK_SIZE, &orphan_data_b, SIDE_TASK_PRIORITY, &dummy_two);
+    printf("Tasks created");
+
+    // Get task statuses
+    vTaskGetInfo(dummy_one, &first_status, pdTRUE, eInvalid);
+    vTaskGetInfo(dummy_two, &second_status, pdTRUE, eInvalid);
+    eTaskState dummy_one_state = first_status.eCurrentState;
+    eTaskState dummy_two_state = second_status.eCurrentState;
+
+    TEST_ASSERT_EQUAL(1, dummy_one_state);
+    TEST_ASSERT_EQUAL(1, dummy_two_state);
+    TEST_ASSERT_EQUAL(2, orphan_data_a.counter);
+    TEST_ASSERT_EQUAL(12, orphan_data_b.counter);
+
+    vTaskDelete(dummy_one);
+    vTaskDelete(dummy_two);
+}
+
 void test_thread(void *args) {
     printf("Start tests\n");
     UNITY_BEGIN();
     RUN_TEST(test_blocked);
     RUN_TEST(test_unblocked);
     RUN_TEST(test_deadlock);
+    RUN_TEST(test_orphaned_lock);
+    RUN_TEST(test_unorphaned_lock);
     UNITY_END();
     sleep_ms(10000);
 }
