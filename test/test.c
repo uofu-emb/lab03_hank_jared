@@ -67,27 +67,32 @@ void test_deadlock() {
     TaskStatus_t first_status, second_status;
     int counter = 0;
 
-    // Create the tasks
-    xTaskCreate(dummy_thread, "dummy_one",
-                SIDE_TASK_STACK_SIZE, NULL, SIDE_TASK_PRIORITY, &dummy_one);
-    xTaskCreate(dummy_thread, "dummy_two",
-                SIDE_TASK_STACK_SIZE, NULL, SIDE_TASK_PRIORITY, &dummy_two);
-    
-    // Create the deadlock structs
     DeadlockData first = {sema_one, sema_two, dummy_one, "dummy_one", 0};
     DeadlockData second = {sema_two, sema_one, dummy_two, "dummy_two", 10};
 
-    deadlock(&first);
-    deadlock(&second);
-
+    printf("Creating tasks\n");
+    // Create the tasks
+    xTaskCreate(deadlock, "dummy_one",
+                SIDE_TASK_STACK_SIZE, &first, SIDE_TASK_PRIORITY, &dummy_one);
+    xTaskCreate(deadlock, "dummy_two",
+                SIDE_TASK_STACK_SIZE, &second, SIDE_TASK_PRIORITY, &dummy_two);
+    printf("Tasks created\n");
+    
+    // Delay to get system locked up
+    vTaskDelay(5000);
     vTaskGetInfo(dummy_one, &first_status, pdTRUE, eInvalid);
     vTaskGetInfo(dummy_two, &second_status, pdTRUE, eInvalid);
 
-    eTaskState dummy1 = first_status.eCurrentState;
-    eTaskState dummy2 = second_status.eCurrentState;
+    eTaskState dummy_one_state = first_status.eCurrentState;
+    eTaskState dummy_two_state = second_status.eCurrentState;
 
-    printf("dummy_one state: %d\n", dummy1);
-    printf("dummy_two state: %d\n", dummy2);
+    TEST_ASSERT_EQUAL(2, dummy_one_state);
+    TEST_ASSERT_EQUAL(2, dummy_two_state);
+    TEST_ASSERT_EQUAL(2, first.counter);
+    TEST_ASSERT_EQUAL(12, second.counter);
+
+    vTaskDelete(dummy_one);
+    vTaskDelete(dummy_two);
 }
 
 void test_thread(void *args) {
