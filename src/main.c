@@ -14,11 +14,6 @@ int main(void) {
     sleep_ms(10000);
     xTaskCreate(master_thread, "MasterThread",
                 MAIN_TASK_STACK_SIZE, NULL, MAIN_TASK_PRIORITY, &master);
-
-    // xTaskCreate(main_thread, "MainThread",
-    //             SIDE_TASK_STACK_SIZE, NULL, SIDE_TASK_PRIORITY, &main);
-    // xTaskCreate(side_thread, "SideThread",
-    //             SIDE_TASK_STACK_SIZE, NULL, SIDE_TASK_PRIORITY, &side);
     vTaskStartScheduler();
 	return 0;
 }
