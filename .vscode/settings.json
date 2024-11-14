@@ -43,6 +43,7 @@
         "cyw43_arch.h": "c",
         "semphr.h": "c",
         "type_traits": "c",
-        "multicore.h": "c"
+        "multicore.h": "c",
+        "stdio.h": "c"
     }
 }

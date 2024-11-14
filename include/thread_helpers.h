@@ -19,4 +19,7 @@ void first_thread(void *params);
 void second_thread(void *params);
 
 // Helpers
-int print_counter(TaskHandle_t *task, SemaphoreHandle_t semaphore, int *counter);
+int print_counter(TaskHandle_t task, SemaphoreHandle_t semaphore, int *counter, 
+    TickType_t timeout);
+
+int blink_led(bool *on, SemaphoreHandle_t semaphore, TickType_t timeout);

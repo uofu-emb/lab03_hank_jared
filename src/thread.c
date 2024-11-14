@@ -14,44 +14,32 @@ int counter = 0;
 bool on = false;
 
 void master_thread(void *params) {
+    // Create the semaphore and tasks
     semaphore = xSemaphoreCreateCounting(1, 1);
     xTaskCreate(first_thread, "FirstThread",
                 SIDE_TASK_STACK_SIZE, NULL, SIDE_TASK_PRIORITY, &first);
     xTaskCreate(second_thread, "SecondThread",
                 SIDE_TASK_STACK_SIZE, NULL, SIDE_TASK_PRIORITY, &second);
+
+    // Endless loop for task
     while (1) {
-        // vTaskDelay(5000);
-        // printf("hello world from kiba\n");
     }
 }
 
+// This task toggles the LED, prints, and increments the counter.
 void first_thread(void *params) {
-    int sema;
-	while (1) {
-        vTaskDelay(1000);
+    while (1) {
+        vTaskDelay(100);
+        blink_led(&on, semaphore, portMAX_DELAY);
+        print_counter(first, semaphore, &counter, portMAX_DELAY);
 
-        int return_val = print_counter(first, semaphore, &counter);
-
-        // cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, on);
-        // vTaskDelay(100);
-
-        // // Critical section
-        // xSemaphoreTake(semaphore, 100);
-		// printf("hello world from %s! Count %d\n", "first", counter++);
-        // sema = xSemaphoreGive(semaphore);
-
-        // on = !on;
 	}
 }
 
+// This task prints and increments the counter.
 void second_thread(void *params) {
 	while (1) {
-        // vTaskDelay(100);
-        
-        // // Critical section
-        // xSemaphoreTake(semaphore, portMAX_DELAY);
-        // counter += counter + 1;
-		// printf("hello world from %s! Count %d\n", "second", counter);
-        // xSemaphoreGive(semaphore);
+        vTaskDelay(100);
+        print_counter(second, semaphore, &counter, portMAX_DELAY);
 	}
 }
