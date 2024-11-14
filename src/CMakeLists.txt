@@ -2,6 +2,7 @@
 add_executable(thread
     main.c
     thread.c
+    thread_helpers.c
     )
 
 pico_set_program_name(thread "test")
