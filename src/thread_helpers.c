@@ -49,11 +49,22 @@ int deadlock(DeadlockData *deadlock_data) {
     // First block
     xSemaphoreTake(deadlock_data->a, portMAX_DELAY);
     deadlock_data->counter++;
-    printf("%s took semaphore and incremented counter\n", deadlock_data->task_name);
-    vTaskDelay(100);
-    printf("%s delayed, trying to grab next semaphore\n", deadlock_data->task_name);
+    printf("%s took first semaphore and incremented counter\n", deadlock_data->task_name);
+    vTaskDelay(1000);
+    printf("%s is after delay\n", deadlock_data->task_name);
 
     // Second block
-    xSeamphoreTake(deadlock_data->b, portMAX_DELAY);
-    
+    xSemaphoreTake(deadlock_data->b, portMAX_DELAY);
+    // Code should never reach here
+    deadlock_data->counter++;
+    printf("%s took second semaphore and incremented counter. Code shouldn't reach here\n",
+            deadlock_data->task_name);
+    xSemaphoreGive(deadlock_data->b);
+    // End second block
+
+    xSemaphoreGive(deadlock_data->a);
+    // End first block
+
+    vTaskSuspend(deadlock_data->task);
+
 }

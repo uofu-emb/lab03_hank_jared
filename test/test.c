@@ -62,29 +62,40 @@ void test_unblocked() {
 
 void test_deadlock() {
     SemaphoreHandle_t sema_one = xSemaphoreCreateCounting(1, 1);
-    SemaphoreHandle_t sema_one = xSemaphoreCreateCounting(1, 1);
+    SemaphoreHandle_t sema_two = xSemaphoreCreateCounting(1, 1);
     TaskHandle_t dummy_one, dummy_two;
+    TaskStatus_t first_status, second_status;
     int counter = 0;
-    int status;
 
-    // Create the second task and immediately suspend it
-    xTaskCreate(dummy_thread, "dummy_two",
-                SIDE_TASK_STACK_SIZE, NULL, SIDE_TASK_PRIORITY, &dummy_two);
-    vTaskSuspend(dummy_two);
-
-    // Create the first task and delay for the second task to suspend
+    // Create the tasks
     xTaskCreate(dummy_thread, "dummy_one",
                 SIDE_TASK_STACK_SIZE, NULL, SIDE_TASK_PRIORITY, &dummy_one);
-    vTaskDelay(3000);
+    xTaskCreate(dummy_thread, "dummy_two",
+                SIDE_TASK_STACK_SIZE, NULL, SIDE_TASK_PRIORITY, &dummy_two);
     
-}
+    // Create the deadlock structs
+    DeadlockData first = {sema_one, sema_two, dummy_one, "dummy_one", 0};
+    DeadlockData second = {sema_two, sema_one, dummy_two, "dummy_two", 10};
 
+    deadlock(&first);
+    deadlock(&second);
+
+    vTaskGetInfo(dummy_one, &first_status, pdTRUE, eInvalid);
+    vTaskGetInfo(dummy_two, &second_status, pdTRUE, eInvalid);
+
+    eTaskState dummy1 = first_status.eCurrentState;
+    eTaskState dummy2 = second_status.eCurrentState;
+
+    printf("dummy_one state: %d\n", dummy1);
+    printf("dummy_two state: %d\n", dummy2);
+}
 
 void test_thread(void *args) {
     printf("Start tests\n");
     UNITY_BEGIN();
     RUN_TEST(test_blocked);
     RUN_TEST(test_unblocked);
+    RUN_TEST(test_deadlock);
     UNITY_END();
     sleep_ms(10000);
 }
