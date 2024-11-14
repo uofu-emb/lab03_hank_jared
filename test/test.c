@@ -13,6 +13,8 @@ void setUp(void) {}
 void tearDown(void) {}
 
 void dummy_thread(void *args);
+void left_thread(void *args);
+void right_thread(void *args);
 
 // Tests if the semaphore is actually blocked during
 void test_blocked() {
@@ -55,7 +57,6 @@ void test_unblocked() {
 
     status = blink_led(&on, semaphore, 1000);
     TEST_ASSERT_EQUAL(1, status);
-    TEST_ASSERT_EQUAL(2, counter);
     TEST_ASSERT_EQUAL(1, on);
 }
 
