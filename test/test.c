@@ -19,6 +19,7 @@ void test_blocked() {
     SemaphoreHandle_t semaphore = xSemaphoreCreateCounting(1, 1);
     TaskHandle_t dummy;
     int counter = 0;
+    bool on = false;
     int status;
 
     // Create dummy task and take the semaphore
@@ -33,8 +34,29 @@ void test_blocked() {
 
     // Send the dummy to take semaphore from blink_led. Should block resulting in fail return
     // value.
-    status = blink_led(dummy, semaphore, 100);
+    status = blink_led(&on, semaphore, 100);
     TEST_ASSERT_EQUAL(0, status);
+}
+
+void test_unblocked() {
+    SemaphoreHandle_t semaphore = xSemaphoreCreateCounting(1, 1);
+    TaskHandle_t dummy;
+    int counter = 0;
+    bool on = false;
+    int status;
+
+    // Create dummy task and take the semaphore
+    xTaskCreate(dummy_thread, "DummyThread",
+                SIDE_TASK_STACK_SIZE, NULL, SIDE_TASK_PRIORITY, &dummy);
+
+    status = print_counter(dummy, semaphore, &counter, 1000);
+    TEST_ASSERT_EQUAL(1, status);
+    TEST_ASSERT_EQUAL(1, counter);
+
+    status = blink_led(&on, semaphore, 1000);
+    TEST_ASSERT_EQUAL(1, status);
+    TEST_ASSERT_EQUAL(2, counter);
+    TEST_ASSERT_EQUAL(1, on);
 }
 
 void test_variable_assignment()
@@ -56,6 +78,7 @@ void test_thread(void *args) {
     printf("Start tests\n");
     UNITY_BEGIN();
     RUN_TEST(test_blocked);
+    RUN_TEST(test_unblocked);
     UNITY_END();
     sleep_ms(10000);
 }
