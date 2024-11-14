@@ -13,8 +13,10 @@
 #define SIDE_TASK_PRIORITY      ( tskIDLE_PRIORITY + 1UL )
 #define SIDE_TASK_STACK_SIZE configMINIMAL_STACK_SIZE
 
-//TaskHandle_t first;
-
+// Thread handlers
 void master_thread(void *params);
 void first_thread(void *params);
-// void second_thread(void *params);
+void second_thread(void *params);
+
+// Helpers
+int print_counter(TaskHandle_t *task, SemaphoreHandle_t semaphore, int *counter);
