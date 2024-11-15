@@ -40,6 +40,7 @@ void test_blocked() {
     TEST_ASSERT_EQUAL(0, status);
 }
 
+// Tests if both print_counter and blink_led use a semaphore properly
 void test_unblocked() {
     SemaphoreHandle_t semaphore = xSemaphoreCreateCounting(1, 1);
     TaskHandle_t dummy;
@@ -60,6 +61,7 @@ void test_unblocked() {
     TEST_ASSERT_EQUAL(1, on);
 }
 
+// Tests the deadlock function
 void test_deadlock() {
     SemaphoreHandle_t sema_one = xSemaphoreCreateCounting(1, 1);
     SemaphoreHandle_t sema_two = xSemaphoreCreateCounting(1, 1);
@@ -67,11 +69,12 @@ void test_deadlock() {
     TaskStatus_t first_status, second_status;
     int counter = 0;
 
+    // Set up args for the deadlock method
     DeadlockData first = {sema_one, sema_two, dummy_one, "dummy_one", 0};
     DeadlockData second = {sema_two, sema_one, dummy_two, "dummy_two", 10};
 
-    printf("Creating deadlock tasks\n");
     // Create the tasks
+    printf("Creating deadlock tasks\n");
     xTaskCreate(deadlock, "dummy_one",
                 SIDE_TASK_STACK_SIZE, &first, SIDE_TASK_PRIORITY, &dummy_one);
     xTaskCreate(deadlock, "dummy_two",
@@ -87,6 +90,7 @@ void test_deadlock() {
     eTaskState dummy_one_state = first_status.eCurrentState;
     eTaskState dummy_two_state = second_status.eCurrentState;
 
+    // Both counters should increment twice before the deadlock, blocking both threads
     TEST_ASSERT_EQUAL(2, dummy_one_state);
     TEST_ASSERT_EQUAL(2, dummy_two_state);
     TEST_ASSERT_EQUAL(2, first.counter);
@@ -96,73 +100,53 @@ void test_deadlock() {
     vTaskDelete(dummy_two);
 }
 
+// Tests orphaned_lock function
 void test_orphaned_lock() {
     SemaphoreHandle_t semaphore = xSemaphoreCreateCounting(1, 1);
-    TaskHandle_t dummy_one, dummy_two;
-    TaskStatus_t first_status, second_status;
-    OrphanedLockData orphan_data_a = {semaphore, 0};
-    OrphanedLockData orphan_data_b = {semaphore, 10};
+    int counter = 0;
+    int status;
+    int sema_count;
 
-    // Create the tasks
-    printf("Creating orphan lock threads\n");
-    xTaskCreate(orphaned_lock, "dummy_one",
-                SIDE_TASK_STACK_SIZE, &orphan_data_a, SIDE_TASK_PRIORITY, &dummy_one);
-    prinf("Giving first task time to begin\n");
-    vTaskDelay(3000);
+    // Send the first thread
+    status = orphaned_lock(semaphore, &counter, 1000);
+    sema_count = uxSemaphoreGetCount(semaphore);
+    TEST_ASSERT_EQUAL(0, status);
+    TEST_ASSERT_EQUAL(1, counter);
+    TEST_ASSERT_EQUAL(0, sema_count);
 
-    xTaskCreate(orphaned_lock, "dummy_two",
-                SIDE_TASK_STACK_SIZE, &orphan_data_b, SIDE_TASK_PRIORITY, &dummy_two);
-    printf("Giving time for second task to begin\n");
-    vTaskDelay(3000);
-    printf("Tasks created");
-
-    // Get task statuses
-    vTaskGetInfo(dummy_one, &first_status, pdTRUE, eInvalid);
-    vTaskGetInfo(dummy_two, &second_status, pdTRUE, eInvalid);
-    eTaskState dummy_one_state = first_status.eCurrentState;
-    eTaskState dummy_two_state = second_status.eCurrentState;
-
-    TEST_ASSERT_EQUAL(1, dummy_one_state);
-    TEST_ASSERT_EQUAL(2, dummy_two_state);
-    TEST_ASSERT_EQUAL(1, orphan_data_a.counter);
-    TEST_ASSERT_EQUAL(10, orphan_data_b.counter);
-
-    vTaskDelete(dummy_one);
-    vTaskDelete(dummy_two);
+    // Send the second thread
+    status = orphaned_lock(semaphore, &counter, 1000);
+    sema_count = uxSemaphoreGetCount(semaphore);
+    TEST_ASSERT_EQUAL(0, status);
+    TEST_ASSERT_EQUAL(1, counter);
+    TEST_ASSERT_EQUAL(0, sema_count);
 }
 
+// Tests unorphaned_lock function
 void test_unorphaned_lock() {
     SemaphoreHandle_t semaphore = xSemaphoreCreateCounting(1, 1);
-    TaskHandle_t dummy_one, dummy_two;
-    TaskStatus_t first_status, second_status;
-    OrphanedLockData orphan_data_a = {semaphore, 0};
-    OrphanedLockData orphan_data_b = {semaphore, 10};
+    int counter = 0;
+    int status;
+    int sema_count;
 
-    // Create the tasks
-    printf("Creating unorphaned lock threads\n");
-    xTaskCreate(unorphaned_lock, "dummy_one",
-                SIDE_TASK_STACK_SIZE, &orphan_data_a, SIDE_TASK_PRIORITY, &dummy_one);
-    xTaskCreate(unorphaned_lock, "dummy_two",
-                SIDE_TASK_STACK_SIZE, &orphan_data_b, SIDE_TASK_PRIORITY, &dummy_two);
-    printf("Tasks created");
+    // Test first thread
+    status = unorphaned_lock(semaphore, &counter, 1000);
+    sema_count = uxSemaphoreGetCount(semaphore);
+    TEST_ASSERT_EQUAL(1, status);
+    TEST_ASSERT_EQUAL(1, counter);
+    TEST_ASSERT_EQUAL(1, sema_count);
 
-    // Get task statuses
-    vTaskGetInfo(dummy_one, &first_status, pdTRUE, eInvalid);
-    vTaskGetInfo(dummy_two, &second_status, pdTRUE, eInvalid);
-    eTaskState dummy_one_state = first_status.eCurrentState;
-    eTaskState dummy_two_state = second_status.eCurrentState;
-
-    TEST_ASSERT_EQUAL(1, dummy_one_state);
-    TEST_ASSERT_EQUAL(1, dummy_two_state);
-    TEST_ASSERT_EQUAL(2, orphan_data_a.counter);
-    TEST_ASSERT_EQUAL(12, orphan_data_b.counter);
-
-    vTaskDelete(dummy_one);
-    vTaskDelete(dummy_two);
+    // Test second thread
+    status = unorphaned_lock(semaphore, &counter, 1000);
+    sema_count = uxSemaphoreGetCount(semaphore);
+    TEST_ASSERT_EQUAL(1, status);
+    TEST_ASSERT_EQUAL(2, counter);
+    TEST_ASSERT_EQUAL(1, sema_count);
 }
 
+//-------------TEST THREAD---------------
 void test_thread(void *args) {
-    printf("Start tests\n");
+    printf("Starting tests\n");
     UNITY_BEGIN();
     RUN_TEST(test_blocked);
     RUN_TEST(test_unblocked);
@@ -175,7 +159,7 @@ void test_thread(void *args) {
 
 void dummy_thread(void *args) {
     while(1) {
-
+        vTaskDelay(100);
     }
 }
 

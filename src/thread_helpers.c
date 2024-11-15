@@ -41,6 +41,9 @@ int blink_led(bool *on, SemaphoreHandle_t semaphore, TickType_t timeout) {
     return xSemaphoreGive(semaphore);
 }
 
+// Creates a deadlock with two semaphores. First thread takes a first and thread 2 takes b first. First thread then
+// tries to grab b, but it is taken. The opposite happens for b. Since neither returns the threads both block 
+// indefinitely.
 int deadlock(DeadlockData *deadlock_data) {
     // Increment counter and take the semaphore
     deadlock_data->counter++;
@@ -51,13 +54,13 @@ int deadlock(DeadlockData *deadlock_data) {
     deadlock_data->counter++;
     printf("%s took first semaphore and incremented counter\n", deadlock_data->task_name);
     vTaskDelay(1000);
-    printf("%s is after delay\n", deadlock_data->task_name);
+    printf("%s made it after delay\n", deadlock_data->task_name);
 
     // Second block
     xSemaphoreTake(deadlock_data->b, portMAX_DELAY);
     // Code should never reach here
     deadlock_data->counter++;
-    printf("%s took second semaphore and incremented counter. Code shouldn't reach here\n",
+    printf("%s took second semaphore and incremented counter. Code shouldn't reach here.\n",
             deadlock_data->task_name);
     xSemaphoreGive(deadlock_data->b);
     // End second block
@@ -65,32 +68,35 @@ int deadlock(DeadlockData *deadlock_data) {
     xSemaphoreGive(deadlock_data->a);
     // End first block
 
+    // Suspend the task if they get here, they won't tho.
     vTaskSuspend(deadlock_data->task);
 }
 
-void orphaned_lock(OrphanedLockData *orphan_data)
-{
-    while (1) {
-        xSemaphoreTake(orphan_data->semaphore, portMAX_DELAY);
-        orphan_data->counter++;
-        if (orphan_data->counter % 2) {
-            continue;
-        }
-        printk("Count %d\n", orphan_data->counter);
-        xSemaphoreGive(orphan_data->semaphore);
+// Any thread that enters will take the semaphore then start the loop over without returning the semaphore. This blocks
+// this thread and any others going in.
+int orphaned_lock(SemaphoreHandle_t semaphore, int *counter, TickType_t timeout) {
+    if (xSemaphoreTake(semaphore, timeout) == pdFALSE) {
+        return pdFALSE;
     }
+
+    *counter = *counter + 1;
+    if (*(counter) % 2) {
+        return pdFALSE;
+    }
+
+    printf("Count %d\n", *counter);
+    return xSemaphoreGive(semaphore);
 }
 
-void unorphaned_lock(OrphanedLockData *orphan_data)
-{
-    while (1) {
-        xSemaphoreTake(orphan_data->semaphore, portMAX_DELAY);
-        orphan_data->counter++;
-        if (orphan_data->counter % 2) {
-            xSemaphoreGive(orphan_data->semaphore);
-            continue;
+// This function properly takes and gives the semaphore, resulting in no deadlocking.
+int unorphaned_lock(SemaphoreHandle_t semaphore, int *counter, TickType_t timeout) {
+        if (xSemaphoreTake(semaphore, timeout) == pdFALSE) {
+            return pdFALSE;
         }
-        printk("Count %d\n", orphan_data->counter);
-        xSemaphoreGive(orphan_data->semaphore);
-    }
+
+        *counter = *counter + 1;
+        if (!(*counter % 2)) {
+            printf("Count %d\n", *counter);
+        }
+        return xSemaphoreGive(semaphore);
 }
