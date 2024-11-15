@@ -23,6 +23,7 @@ typedef struct DeadlockData {
 
 typedef struct OrphanedLockData {
     SemaphoreHandle_t semaphore;
+    char* task_name;
     int counter;
 } OrphanedLockData;
 
